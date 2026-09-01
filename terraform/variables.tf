@@ -44,6 +44,12 @@ variable "risk_threshold_hours" {
   default     = 12
 }
 
+variable "pandas_layer_arn" {
+  description = "ARN of the AWS SDK for pandas Lambda layer (supplies pandas + awswrangler to the API). Region-specific; leave empty to skip attaching a layer. See https://aws-sdk-pandas.readthedocs.io/en/stable/layers.html"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Extra tags applied to every taggable resource"
   type        = map(string)

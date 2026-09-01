@@ -33,8 +33,10 @@ infrastructure it would run on in AWS, and the CI/CD that would deploy it.
 - Mock data generation simulating 3 real sources (SAP POs, carrier ETA, dock scans)
 - ETL script: extract → transform (join + risk flag) → load
 - Static visualization output (risk breakdown + supplier on-time rate)
-- Terraform definition of the target AWS architecture (S3, IAM, Glue, Data Catalog)
-- A CI/CD pipeline definition (GitHub Actions) that deploys the Terraform + ETL code on push
+- Read API (FastAPI) over the curated data — CSV locally, Athena when deployed
+- Angular dashboard consuming the API (risk breakdown, supplier rates, at-risk table)
+- Terraform definition of the target AWS architecture (S3, IAM, Glue, Data Catalog, Athena, Lambda, API Gateway, CloudFront)
+- A CI/CD pipeline definition (GitHub Actions) that deploys the Terraform + ETL + front-end on push
 - A short ELT variant note — same pipeline, alternate pattern (see section 7)
 - README explaining the architecture
 
@@ -42,7 +44,6 @@ infrastructure it would run on in AWS, and the CI/CD that would deploy it.
 - Live AWS deployment (code is written to be deploy-ready, not actually deployed)
 - Real SAP/carrier API integration
 - ML-based delay prediction (rule-based risk threshold only)
-- Front-end app — static chart substitutes for a live dashboard
 
 ## 4. Components
 
@@ -50,25 +51,30 @@ infrastructure it would run on in AWS, and the CI/CD that would deploy it.
 |---|---|---|
 | 1 | `generate_mock_data.py` | Simulated raw data sources |
 | 2 | `etl.py` | ETL: extract, transform, load, with a configurable risk threshold |
-| 3 | `visualize.py` | Data analytics / visualization output |
-| 4 | `terraform/` | AWS infra as code: S3 data lake, IAM role, Glue job, Glue Data Catalog, Athena |
-| 5 | `glue/glue_etl.py` | PySpark port of the ETL that the Glue job runs |
-| 6 | `.github/workflows/deploy.yml` | CI/CD: validates and deploys Terraform + ETL code on push |
-| 7 | `athena_queries.sql` | Example queries against the curated table (ELT-side view) |
-| 8 | `README.md` | Explains the project and architecture |
-| 9 | `requirements.md` (this file) | Defines scope |
+| 3 | `visualize.py` | Data analytics / static visualization output |
+| 4 | `glue/glue_etl.py` | PySpark port of the ETL that the Glue job runs |
+| 5 | `api/` | FastAPI read API over the curated data (CSV or Athena backend) |
+| 6 | `frontend/` | Angular dashboard consuming the API |
+| 7 | `terraform/` | AWS infra as code: S3, IAM, Glue job + Data Catalog, Athena, Lambda, API Gateway, CloudFront |
+| 8 | `.github/workflows/deploy.yml` | CI/CD: validates and deploys infra + ETL + front-end on push |
+| 9 | `athena_queries.sql` | Example queries against the curated table (ELT-side view) |
+| 10 | `README.md` | Explains the project and architecture |
+| 11 | `requirements.md` (this file) | Defines scope |
 
 ## 5. Tech stack
 
-- **AWS** — S3 (data lake), IAM (least-privilege access), Glue (ETL + Data Catalog), Athena (query layer)
+- **AWS** — S3 (data lake + static site), IAM (least-privilege), Glue (ETL + Data Catalog), Athena (query layer), Lambda + API Gateway (read API), CloudFront (dashboard CDN)
 - **Terraform** — infrastructure as code, parameterized by `plant_id` and `environment` so it can redeploy to multiple plants
-- **CI/CD** — GitHub Actions workflow running `terraform plan`/`apply` and packaging ETL code on push to `main`
-- **Data Analytics / ETL** — Python + pandas for extract/transform/load logic; matplotlib for the visualization layer
+- **CI/CD** — GitHub Actions workflow running the pipeline, an API smoke test, the Angular build, and `terraform plan`/`apply` on push to `main`
+- **Data Analytics / ETL** — Python + pandas for extract/transform/load logic; matplotlib for the static report
+- **API** — FastAPI + Mangum (Lambda), pandas via the AWS SDK for pandas layer
+- **Front-end** — Angular 17 (standalone components), CSS-only charts, no chart library
 - **ELT variant** — an alternative pattern (raw data loaded first, transformed via SQL/Athena afterward)
 
 ## 6. Success criteria
 
 - Pipeline runs end-to-end locally with one command per stage and produces a real chart
+- API serves the curated data as JSON; Angular dashboard renders it
 - Terraform is valid, reviewable code — not pseudo-code — even though not deployed
 - CI/CD workflow is realistic and runs if pushed to a repo with AWS credentials configured
 
