@@ -8,7 +8,7 @@ Runs entirely on mock data — no AWS account or company systems needed — but 
 layer is structured the way a production pipeline would be: ingestion, transform,
 storage design, infrastructure-as-code, and CI/CD.
 
-See [requirements.md](requirements.md) for the full scope and rationale.
+See [requirements.md](requirements.md) for the full scope.
 
 ---
 
